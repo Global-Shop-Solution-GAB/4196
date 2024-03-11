@@ -1,0 +1,596 @@
+Program.Sub.Preflight.Start
+Variable.Global.iWF.Declare(Long,0)
+Variable.Global.iLine.Declare(Long,0)
+Variable.UDT.ROUTER.Define("Number",String)
+Variable.UDT.ROUTER.Define("Desc",String)
+Variable.UDT.ROUTER.Define("Sequence",String)
+Variable.UDT.ROUTER.Define("LMO",String)
+Variable.UDT.ROUTER.Define("Part",String)
+Variable.UDT.ROUTER.Define("Workcenter",String)
+Variable.UDT.ROUTER.Define("Seq_Desc",String)
+Variable.UDT.ROUTER.Define("Setup",String)
+Variable.UDT.ROUTER.Define("RunTime",String)
+Variable.UDT.ROUTER.Define("Customer",String)
+Variable.UDT.ROUTER.Define("Orig_Date",String)
+Variable.UDT.ROUTER.Define("Operation",String)
+Variable.UDT.ROUTER.Define("Rate",String)
+Variable.UDT.ROUTER.Define("UM",String)
+Variable.UDT.ROUTER.Define("Desc1",String)
+Variable.UDT.ROUTER.Define("Desc2",String)
+Variable.UDT.ROUTER.Define("Desc3",String)
+Variable.UDT.ROUTER.Define("Qty1",String)
+Variable.UDT.ROUTER.Define("Qty2",String)
+Variable.UDT.ROUTER.Define("Qty3",String)
+Variable.UDT.ROUTER.Define("Qty4",String)
+Variable.UDT.ROUTER.Define("Purge",String)
+Variable.UDT.ROUTER.Define("Frequency",String)
+Variable.UDT.ROUTER.Define("Machine",String)
+Variable.UDT.ROUTER.Define("Overlap",String)
+Variable.UDT.ROUTER.Define("WCFact",String)
+Variable.UDT.ROUTER.Define("Min_Flag",String)
+Variable.UDT.ROUTER.Define("Min_Out",String)
+Variable.UDT.ROUTER.Define("Crew",String)
+Variable.UDT.ROUTER.Define("Lead",String)
+Variable.UDT.ROUTER.Define("Locn",String)
+Variable.UDT.ROUTER.Define("Tooling",String)
+Variable.UDT.ROUTER.Define("Sort",String)
+Variable.UDT.ROUTER.Define("Drawing",String)
+Variable.UDT.ROUTER.Define("Misc_Text",String)
+Variable.UDT.ROUTER.Define("Scrap",String)
+Variable.UDT.ROUTER.Define("CUST_Part",String)
+Variable.UDT.ROUTER.Define("Sort1",String)
+Variable.UDT.ROUTER.Define("Sort2",String)
+Variable.UDT.ROUTER.Define("Commission",String)
+Variable.UDT.ROUTER.Define("Qty5",String)
+Variable.UDT.ROUTER.Define("Qty6",String)
+Variable.UDT.ROUTER.Define("Qty7",String)
+Variable.UDT.ROUTER.Define("Qty8",String)
+Variable.UDT.ROUTER.Define("Qty9",String)
+Variable.UDT.ROUTER.Define("Qty10",String)
+Variable.UDT.ROUTER.Define("Signoff_User",String)
+Variable.UDT.ROUTER.Define("Signoff_Type",String)
+Variable.UDT.ROUTER.Define("Prod_Line",String)
+Variable.UDT.ROUTER.Define("No_Reprice",String)
+Variable.UDT.ROUTER.Define("YieldPct",String)
+
+
+'Variable.UDT.ROUTER.Define("Comment",String)
+'Variable.UDT.ROUTER.Define("Multiple",String)
+Variable.uGlobal.uRtr.Declare("ROUTER")
+
+Variable.Global.iLineRTR.Declare(Long,0)
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.iid.Declare(long)
+v.Local.sECN.Declare(string)
+v.Local.iret.Declare(long,0)
+v.Local.stitle.Declare(string)
+v.Local.ssql.Declare(string)
+v.Local.itype.declare(long)
+v.Local.dduedate.Declare(date)
+v.Local.istatus.Declare(long)
+v.Local.sECNPrefix.Declare(string)
+
+'This will be workflow that will be triggered from the ECN.  The workflow has been provided and the logic will be enforced for each step according to the specifications below. 
+'Coded by: WAW
+'Date: 08/26/2016
+
+'open connection
+F.odbc.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass,1000000)
+
+'Complete line hook
+F.Intrinsic.Control.if(V.Caller.Hook,=,34700)
+	f.Global.WorkFlow.GetIDFromTitle("ECN",v.Global.iWF)
+	f.Intrinsic.Control.CallSub(initialengapproval)
+f.Intrinsic.Control.EndIf
+
+'call router creation sub
+f.Intrinsic.Control.If(v.Caller.Hook,=,47260)
+	f.Intrinsic.Control.CallSub(routercreation)
+f.Intrinsic.Control.EndIf
+
+'Signoff
+f.Intrinsic.Control.If(v.Caller.Hook,=,34701)
+	f.Global.WorkFlow.GetIDFromTitle("ECN",v.Global.iWF)
+	f.Intrinsic.Control.CallSub(initialengapproval)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Main.End
+
+Program.Sub.End.Start
+F.Intrinsic.Control.SetErrorHandler("End_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'close connection to the database
+F.ODBC.Connection!conx.Close
+
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("End_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.End.End
+
+Program.Sub.InitialEngApproval.Start
+F.Intrinsic.Control.SetErrorHandler("InitialEngApproval_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.sret.Declare(string)
+v.Local.i.Declare(long)
+v.Local.sbody.Declare(string)
+v.Local.iuserid.Declare(long)
+v.Local.ssubject.Declare(string)
+v.Local.ssenderemail.Declare(string)
+v.Local.semail.Declare(string)
+v.Local.susername.Declare(string)
+v.Local.ssql.Declare(string)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+
+'check to see if this line has already been completed
+f.Intrinsic.String.Build("Select COMPLETED_BY from ATG_WF_LINES where LINE = '{0}' and WF_ID = '{1}'","1",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'if this line has been completed call the quality inspection sub
+	f.Intrinsic.Control.If(v.ODBC.conx!rst.FieldValTrim!COMPLETED_BY,<>,"")
+		'close connection and exit sub and call qualty inspection sub
+		f.ODBC.conx!rst.close
+		f.Intrinsic.Control.CallSub(programmingactionlist)
+		f.Intrinsic.Control.ExitSub
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+f.ODBC.conx!rst.close
+
+'set the body and the subject of the email
+f.Intrinsic.String.Build("{0}{1}","Please check your Workflows and complete any oustanding ","steps.",v.Local.sbody)
+v.Local.ssubject.Set("A New ECN Has Been Created")
+
+'get the e-mails from the Engineering group?
+f.Global.Security.GetGroupEmails("GROUP",v.Local.sret)
+
+'split the return
+f.Intrinsic.String.Split(v.Local.sret,"*!*",v.Local.sret)
+
+'loop through the emails of the group and notify the users
+f.Intrinsic.Control.For(v.Local.i,v.Local.sret.LBound,v.Local.sret.UBound,1)
+	'get the user ID
+	f.Global.Security.getuserid(v.Caller.User,v.Caller.CompanyCode,v.Local.iuserid)
+	f.Global.Security.GetFullName(v.Caller.CompanyCode,v.Local.susername)
+	f.Global.Security.getuseremail(v.caller.user,v.local.ssenderemail)
+	f.Intrinsic.String.Build("{1}*!*{0}",v.Local.susername.trim,v.Local.ssenderemail.trim,v.local.semail)
+	
+	'send an email to the employee
+	f.Global.Messaging.queuemessage(v.Caller.CompanyCode,v.Local.iuserid.Trim,"",v.Local.ssubject,v.local.semail.Trim,v.local.sret(v.Local.i),v.local.sbody)
+f.Intrinsic.Control.Next(v.Local.i)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'",v.Global.iline.Trim,v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.EndIf
+
+
+'call the second initial eng approval sub
+f.Intrinsic.Control.CallSub(initialengapproval2)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("InitialEngApproval_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.InitialEngApproval.End
+
+Program.Sub.InitialEngApproval2.Start
+F.Intrinsic.Control.SetErrorHandler("InitialEngApproval2_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","1",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff is the same as the one assigned
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GRP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'check to see if the user who signed off is the one who was assigned to it
+f.Intrinsic.Control.If(v.Local.suser.Trim,=,v.Local.ssignoff.Trim)
+	'move on to progamming sub
+	f.Intrinsic.Control.CallSub(programmingactionlist)
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.Else
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user needs to be the same user that is assigned to the engineering approval step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.EndIf
+
+'complete this line
+'F.Global.WorkFlow.CompleteLine(v.Global.iWF.Trim, 1)
+
+'Make sure the person who signed off is the one who it was assigned to
+'f.Intrinsic.Control.If("JGATES",<>,v.Local.ssignoff.Trim)
+'	'inform the user that the person signing off doesn't match who it was assigned to
+'	f.Intrinsic.UI.Msgbox("Sign off user needs to be JGATES, Workflow line not completed")
+'	V.Passed.999999.Set(1)
+'	f.Intrinsic.Control.CallSub(end)
+'f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("InitialEngApproval2_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.InitialEngApproval2.End
+
+Program.Sub.ProgrammingActionList.Start
+F.Intrinsic.Control.SetErrorHandler("ProgrammingActionList_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","2",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for the programming action list step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.EndIf
+
+'complete this line
+'F.Global.WorkFlow.CompleteLine(v.Global.iWF.Trim, 2)
+
+'call the datasheet sub
+f.Intrinsic.Control.CallSub(datasheetcreation)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ProgrammingActionList_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.ProgrammingActionList.End
+
+Program.Sub.DataSheetCreation.Start
+F.Intrinsic.Control.SetErrorHandler("DataSheetCreation_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","3",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for the data sheet creation step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.Else
+	'complete this line
+'	F.Global.WorkFlow.CompleteLine(v.Global.iWF.Trim, 3)
+	'otherwise call the plant manager subroutine
+	f.Intrinsic.Control.CallSub(plantmanager)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("DataSheetCreation_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.DataSheetCreation.End
+
+Program.Sub.PlantManager.Start
+F.Intrinsic.Control.SetErrorHandler("PlantManager_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","4",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for plant manager approval step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.Else
+	'complete this line
+'	F.Global.WorkFlow.CompleteLine(v.Global.iWF.Trim, 4)
+	'otherwise call the plant manager subroutine
+	f.Intrinsic.Control.CallSub(ProcessDrawings)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("PlantManager_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.PlantManager.End
+
+Program.Sub.ProcessDrawings.Start
+F.Intrinsic.Control.SetErrorHandler("ProcessDrawings_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","5",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for process drawings step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.Else
+	'complete this line
+'	F.Global.WorkFlow.CompleteLine(v.Global.iWF.Trim, 5)
+	'create the router
+	f.Intrinsic.Control.CallSub(routercreation)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("ProcessDrawings_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.ProcessDrawings.End
+
+Program.Sub.RouterCreation.Start
+F.Intrinsic.Control.SetErrorHandler("RouterCreation_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+V.Local.iRowCount.Declare(Long)
+V.Local.iRow.Declare(Long)
+V.Local.sRow.Declare(String)
+V.Local.sRowTitle.Declare(String)
+V.Local.sColums.Declare(String)
+V.Local.iColumn.Declare(Long)
+V.Local.sTitle.Declare(String)
+V.Local.sRowSave.Declare(String)
+V.Local.sData.Declare(String)
+
+v.Local.spart.Declare(string)
+v.Local.srev.Declare(string)
+v.Local.slocation.Declare(string)
+v.Local.sdesc.Declare(string)
+v.Local.scompletedby.Declare(string)
+
+'This is where we will generate the router
+f.Intrinsic.Control.If(v.Caller.Hook,=,47260)
+	'when the router/routers are created we will set a flag somewhere indicating that they were made. That flag will be checked against later
+	'based on data from a BDF but not sure if doing multiple uploads or maybe 1 out of 3 in the BDF, also the BDF has "New" parts, does she want those as routers too?
+f.Intrinsic.Control.EndIf
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP, COMPLETED_BY from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","6",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+	v.Local.scompletedby.Set(v.ODBC.conx!rst.FieldValTrim!COMPLETED_BY)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'If a router has been made and the appropriate user signed off you may move on to the routerapproval and complete this step
+
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for process drawings step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.Else
+	'make sure it has been completed
+	f.Intrinsic.Control.If(v.Local.scompletedby,<>,"")
+		'you may go o to approve
+		f.Intrinsic.Control.CallSub(routerapproval)
+	f.Intrinsic.Control.Else
+		'inform the user that the this is incomplete
+	f.Intrinsic.UI.Msgbox("The router creation step is still marked asincomplete")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+	f.Intrinsic.Control.endif
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("RouterCreation_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.RouterCreation.End
+
+Program.Sub.RouterApproval.Start
+F.Intrinsic.Control.SetErrorHandler("RouterApproval_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+v.Local.suser.Declare(string)
+v.Local.ssignoff.Declare(string)
+v.Local.ssql.Declare(string)
+V.Local.iRowCount.Declare(Long)
+V.Local.iRow.Declare(Long)
+v.Local.scompletedby.Declare(string)
+
+'Get the user group for that line
+f.Intrinsic.String.Build("Select USER_GROUP, SIGNOFF_USER_GRP, COMPLETED_BY from ATG_WF_LINES where LINE_ID = '{0}' and WF_ID = '{1}'","7",v.Global.iWF.Trim,v.Local.ssql)
+F.ODBC.Connection!conx.OpenRecordsetRO("rst",V.Local.sSQL)
+F.Intrinsic.Control.If(V.ODBC.conx!rst.EOF,=,False)
+	'check to see if the user that signedoff on it is the same as the one assigned to it
+	v.Local.suser.Set(v.ODBC.conx!rst.FieldValTrim!USER_GROUP)
+	v.Local.ssignoff.Set(v.ODBC.conx!rst.FieldValTrim!SIGNOFF_USER_GRP)
+	v.Local.scompletedby.Set(v.ODBC.conx!rst.FieldValTrim!COMPLETED_BY)
+f.Intrinsic.Control.EndIf
+'close connection
+F.ODBC.conx!rst.Close
+
+'Make sure the person who signed off is the one who it was assigned to
+f.Intrinsic.Control.If(v.Local.suser.Trim,<>,v.Local.ssignoff.Trim)
+	'inform the user that the person signing off doesn't match who it was assigned to
+	f.Intrinsic.UI.Msgbox("Sign off user does not match the assigned user for process drawings step, Workflow line not completed")
+	V.Passed.999999.Set(1)
+	f.Intrinsic.Control.CallSub(end)
+f.Intrinsic.Control.Else
+	'make sure it has been completed
+	f.Intrinsic.Control.If(v.Local.scompletedby,<>,"")
+		'inform the user that the this is incomplete
+		f.Intrinsic.UI.Msgbox("The ECN Workflow is now complete")
+	f.Intrinsic.Control.endif
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("RouterApproval_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4196_ECN.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(end)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.RouterApproval.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$WAW$}$8/24/2016 1:32:53 PM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$This will be a custom GAB Script that will trigger a workflow when the Save button on the Engineering Change Control Maintenance New screen is used.  
+
+The ECN will trigger the provided Workflow when the Save button is clicked.  This will happen under:
+Quality System > Transactions > Maintain Engineering Change Control > New
+
+The ECN number and Authorization Description will used in the WorkFlow Queue.
+Program.Sub.Comments.End
